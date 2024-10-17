@@ -27,7 +27,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            const allowedAuthor = 'sakshi-chauhan-maersk';  // Replace with allowed GitHub username
+            const allowedAuthor = 'AniketSingh1m';  // Replace with allowed GitHub username
             if (pr.head.ref === 'br2' && pr.base.ref === 'br1' && pr.user.login === allowedAuthor) {
               await github.rest.pulls.merge({
                 owner: context.repo.owner,
