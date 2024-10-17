@@ -1,0 +1,71 @@
+name: Auto Merge br2 into br1 and main
+
+on:
+  pull_request:
+    branches:
+      - br1
+    types:
+      - opened
+      - synchronize
+
+# Define global permissions for all jobs
+permissions:
+  pull-requests: write  # Gives write access to pull requests (needed for merging)
+  contents: write        # Gives write access to repository contents
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.ref == 'br2'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Auto merge PR if author is correct (br2 to br1)
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const allowedAuthor = 'sakshi-chauhan-maersk';  // Replace with allowed GitHub username
+            if (pr.head.ref === 'br2' && pr.base.ref === 'br1' && pr.user.login === allowedAuthor) {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'merge',
+              });
+              console.log('PR from br2 to br1 merged successfully');
+            } else {
+              console.log('PR not merged: either the branch or author did not match.');
+            }
+
+  merge-br2-to-main:
+    runs-on: ubuntu-latest
+    needs: automerge  # Ensure this job runs only after the PR to br1 is merged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: main  # Checkout the main branch first
+
+      - name: Merge br2 into main via GitHub API
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const baseBranch = 'main';  // Branch you want to merge into
+            const headBranch = 'br2';  // Branch you want to merge from
+            try {
+              const mergeResponse = await github.rest.repos.merge({
+                owner: owner,
+                repo: repo,
+                base: baseBranch,
+                head: headBranch,
+                commit_message: 'Automatically merged br2 into main'
+              });
+              console.log('Merge of br2 into main was successful:', mergeResponse.data);
+            } catch (error) {
+              console.error('Error merging br2 into main:', error.message);
+            }
